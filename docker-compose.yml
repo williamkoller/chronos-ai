@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  chronos-api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    ports:
+      - '8000:8000'
+    environment:
+      - NOTION_TOKEN=${NOTION_TOKEN}
+      - DATABASE_ID=${DATABASE_ID}
+      - CLAUDE_API_KEY=${CLAUDE_API_KEY}
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
+
+  chronos-dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile.dashboard
+    ports:
+      - '8501:8501'
+    depends_on:
+      - chronos-api
+    environment:
+      - API_BASE_URL=http://chronos-api:8000
+    restart: unless-stopped
+
+  chronos-db:
+    image: postgres:15
+    environment:
+      - POSTGRES_DB=chronos
+      - POSTGRES_USER=chronos
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
