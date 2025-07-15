@@ -1,0 +1,58 @@
+FROM python:3.12.11-alpine
+
+LABEL maintainer="CHRONOS AI Team"
+LABEL description="CHRONOS AI Dashboard - Streamlit Interface"
+LABEL version="1.0.0"
+
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV STREAMLIT_SERVER_PORT=8501
+ENV STREAMLIT_SERVER_ADDRESS=0.0.0.0
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y \
+    gcc \
+    g++ \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt .
+
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
+
+RUN useradd --create-home --shell /bin/bash chronos && \
+    chown -R chronos:chronos /app
+
+COPY dashboard/ ./dashboard/
+
+COPY core/ ./core/
+COPY integrations/ ./integrations/
+COPY learning/ ./learning/
+
+RUN mkdir -p /app/data && \
+    chown -R chronos:chronos /app/data
+
+USER chronos
+
+RUN mkdir -p ~/.streamlit && \
+    echo '[server]' > ~/.streamlit/config.toml && \
+    echo 'port = 8501' >> ~/.streamlit/config.toml && \
+    echo 'address = "0.0.0.0"' >> ~/.streamlit/config.toml && \
+    echo 'headless = true' >> ~/.streamlit/config.toml && \
+    echo 'enableCORS = false' >> ~/.streamlit/config.toml && \
+    echo 'enableXsrfProtection = false' >> ~/.streamlit/config.toml && \
+    echo '' >> ~/.streamlit/config.toml && \
+    echo '[theme]' >> ~/.streamlit/config.toml && \
+    echo 'primaryColor = "#FF6B6B"' >> ~/.streamlit/config.toml && \
+    echo 'backgroundColor = "#FFFFFF"' >> ~/.streamlit/config.toml && \
+    echo 'secondaryBackgroundColor = "#F0F2F6"' >> ~/.streamlit/config.toml && \
+    echo 'textColor = "#262730"' >> ~/.streamlit/config.toml
+
+EXPOSE 8501
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8501/_stcore/health || exit 1
+
+CMD ["streamlit", "run", "dashboard/app.py", "--server.port=8501", "--server.address=0.0.0.0", "--server.headless=true"]
