@@ -1,4 +1,4 @@
-FROM python:3.12.11-alpine
+FROM python:3.12.11-slim
 
 LABEL maintainer="CHRONOS AI Team"
 LABEL description="CHRONOS AI Dashboard - Streamlit Interface"
