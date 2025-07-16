@@ -1,3 +1,4 @@
+import os
 from fastapi import FastAPI, HTTPException, BackgroundTasks
 from pydantic import BaseModel
 from typing import Dict, List, Optional
@@ -34,14 +35,19 @@ class ScheduleOptimize(BaseModel):
 
 # Configuração global
 config = {
-    'notion_token': 'your_notion_token',
-    'database_id': 'your_database_id', 
-    'claude_api_key': 'your_claude_key'
+    'notion_token': os.getenv('NOTION_TOKEN'),
+    'database_id': os.getenv('DATABASE_ID'), 
+    'claude_api_key': os.getenv('CLAUDE_API_KEY')
 }
 
 # Inicializa CHRONOS
-from core.scheduler import ChronosCore
-chronos = ChronosCore(config)
+try:
+    from core.scheduler import ChronosCore
+    chronos = ChronosCore(config)
+    print("✅ CHRONOS inicializado com sucesso")
+except Exception as e:
+    print(f"❌ Erro ao inicializar CHRONOS: {e}")
+    chronos = None
 
 @app.get("/")
 async def root():
@@ -56,7 +62,12 @@ async def root():
 async def schedule_task(task: TaskCreate):
     """Agenda uma nova tarefa com IA"""
     try:
-        task_data = task.dict()
+        task_data = task.model_dump()
+        
+        # Verificar se chronos foi inicializado
+        if not chronos:
+            raise HTTPException(status_code=500, detail="CHRONOS não foi inicializado corretamente")
+        
         result = chronos.orchestrate_schedule(task_data)
         
         return {
@@ -68,14 +79,28 @@ async def schedule_task(task: TaskCreate):
             "alternatives": result.get('alternatives', [])
         }
         
+    except ValueError as e:
+        print(f"📋 Dados inválidos recebidos: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"Dados da tarefa inválidos: {str(e)}")
+    except KeyError as e:
+        print(f"🔑 Campo obrigatório ausente: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"Campo obrigatório ausente: {str(e)}")
+    except ConnectionError as e:
+        print(f"🔌 Erro de conectividade: {str(e)}")
+        raise HTTPException(status_code=503, detail="Serviços externos indisponíveis")
+    except TimeoutError as e:
+        print(f"⏱️ Timeout na operação: {str(e)}")
+        raise HTTPException(status_code=504, detail="Timeout ao processar requisição")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Erro ao agendar tarefa: {str(e)}")
+        error_type = type(e).__name__
+        print(f"⚠️ Erro inesperado [{error_type}]: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Erro interno do servidor [{error_type}]")
 
 @app.post("/feedback/submit")
 async def submit_feedback(feedback: FeedbackSubmit, background_tasks: BackgroundTasks):
     """Submete feedback do usuário"""
     try:
-        feedback_data = feedback.dict()
+        feedback_data = feedback.model_dump()
         
         # Processa feedback em background
         background_tasks.add_task(process_feedback_async, feedback_data)

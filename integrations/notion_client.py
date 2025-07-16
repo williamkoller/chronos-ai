@@ -1,4 +1,4 @@
-import datetime
+from datetime import datetime, timedelta
 import requests
 from typing import Dict, List, Optional
 
@@ -23,7 +23,7 @@ class NotionClient:
             "filter": {
                 "property": "Created",
                 "date": {
-                    "after": (datetime.now() - datetime.timedelta(days=days_back)).isoformat()
+                    "after": (datetime.now() - timedelta(days=days_back)).isoformat()
                 }
             },
             "sorts": [{"property": "Created", "direction": "descending"}]
@@ -33,11 +33,26 @@ class NotionClient:
             response = requests.post(url, headers=self.headers, json=filter_payload)
             if response.status_code == 200:
                 return self._parse_notion_response(response.json())
-            else:
-                print(f"❌ Erro Notion API: {response.status_code}")
+            elif response.status_code == 401:
+                print(f"🔐 Notion: Token de autenticação inválido ou expirado")
                 return []
+            elif response.status_code == 400:
+                print(f"📋 Notion: Configuração de database incorreta (ID: {self.database_id[:8]}...)")
+                return []
+            elif response.status_code == 404:
+                print(f"🔍 Notion: Database não encontrado ou sem acesso")
+                return []
+            else:
+                print(f"🌐 Notion API erro {response.status_code}: {response.text[:100]}")
+                return []
+        except requests.exceptions.ConnectionError:
+            print(f"🔌 Notion: Falha de conexão - verifique internet")
+            return []
+        except requests.exceptions.Timeout:
+            print(f"⏱️ Notion: Timeout na requisição")
+            return []
         except Exception as e:
-            print(f"❌ Erro na conexão Notion: {e}")
+            print(f"⚠️ Notion erro inesperado: {type(e).__name__}: {str(e)[:100]}")
             return []
     
     def create_task(self, task_data: Dict, schedule_info: Dict) -> Optional[str]:

@@ -1,4 +1,4 @@
-import datetime
+from datetime import datetime, timedelta
 import requests
 import json
 import re
@@ -27,7 +27,8 @@ class ClaudeClient:
         if response:
             return self._parse_scheduling_response(response)
         
-        return self._default_suggestion(task_data)
+        # Retorna None quando Claude falha, para o scheduler usar fallback
+        return None
     
     def analyze_user_patterns(self, task_history: List[Dict]) -> Dict:
         """Analisa padrões do usuário com Claude"""
@@ -79,13 +80,29 @@ class ClaudeClient:
             
             if response.status_code == 200:
                 return response.json()['content'][0]['text']
+            elif response.status_code == 401:
+                print(f"🔐 Claude: API key inválida ou expirada")
+                return None
+            elif response.status_code == 429:
+                print(f"⏳ Claude: Limite de taxa excedido - aguarde alguns minutos")
+                return None
+            elif response.status_code == 400:
+                print(f"📝 Claude: Formato de requisição inválido")
+                print(f"Detalhes: {response.text[:200]}")
+                return None
             else:
-                print(f"❌ Erro Claude API: {response.status_code}")
-                print(f"Resposta: {response.text}")
+                print(f"🤖 Claude API erro {response.status_code}")
+                print(f"Resposta: {response.text[:200]}")
                 return None
                 
+        except requests.exceptions.ConnectionError:
+            print(f"🔌 Claude: Falha de conexão - verifique internet")
+            return None
+        except requests.exceptions.Timeout:
+            print(f"⏱️ Claude: Timeout na requisição")
+            return None
         except Exception as e:
-            print(f"❌ Erro ao chamar Claude: {e}")
+            print(f"⚠️ Claude erro inesperado: {type(e).__name__}: {str(e)[:100]}")
             return None
     
     def _build_scheduling_prompt(self, task_data: Dict, user_patterns: Dict, context: Dict) -> str:
@@ -271,7 +288,7 @@ class ClaudeClient:
     def _default_suggestion(self, task_data: Dict) -> Dict:
         """Sugestão padrão em caso de erro"""
         return {
-            "scheduled_datetime": (datetime.now() + datetime.timedelta(hours=1)).isoformat(),
+            "scheduled_datetime": (datetime.now() + timedelta(hours=1)).isoformat(),
             "confidence_score": 0.3,
             "reasoning": "Sugestão padrão - dados insuficientes",
             "duration_minutes": task_data.get('estimated_time', 60),

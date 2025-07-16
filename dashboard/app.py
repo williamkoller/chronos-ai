@@ -15,58 +15,310 @@ st.set_page_config(
 )
 
 # API Base URL
-API_BASE_URL = "http://localhost:8000"
+import os
+API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:8000")
+
+# Funções auxiliares para API
+def call_api(endpoint: str, method: str = "GET", data: dict = None):
+    """Faz chamadas para a API CHRONOS"""
+    try:
+        url = f"{API_BASE_URL}{endpoint}"
+        if method == "GET":
+            response = requests.get(url, timeout=10)
+        elif method == "POST":
+            response = requests.post(url, json=data, timeout=10)
+        
+        if response.status_code == 200:
+            return response.json()
+        else:
+            error_detail = ""
+            try:
+                error_response = response.json()
+                error_detail = error_response.get("detail", "Detalhes não disponíveis")
+            except:
+                error_detail = response.text
+            
+            st.error(f"Erro na API ({response.status_code}): {error_detail}")
+            return None
+    except requests.exceptions.RequestException as e:
+        st.error(f"Erro de conexão com {API_BASE_URL}: {str(e)}")
+        return None
+
+def get_user_patterns():
+    """Busca padrões do usuário"""
+    return call_api("/patterns/user")
+
+def get_performance_analytics():
+    """Busca analytics de performance"""
+    return call_api("/analytics/performance")
+
+def schedule_task_api(task_data: dict):
+    """Agenda tarefa via API"""
+    return call_api("/schedule/task", "POST", task_data)
 
 def main():
     st.title("🤖 CHRONOS AI - Intelligent Time Orchestrator")
     st.markdown("*Your AI-powered productivity companion*")
     
-    # Sidebar
+    # Sidebar para inserir informações
+    with st.sidebar:
+        st.header("📝 Adicionar Nova Tarefa")
+        
+        with st.form("task_form"):
+            task_title = st.text_input("Título da Tarefa", placeholder="Ex: Revisar documentação")
+            task_description = st.text_area("Descrição", placeholder="Detalhes da tarefa...")
+            
+            task_category = st.selectbox(
+                "Categoria",
+                ["Development", "Meetings", "Planning", "Documentation", "Research", "Other"]
+            )
+            
+            estimated_duration = st.slider("Duração Estimada (minutos)", 15, 480, 60, step=15)
+            
+            priority = st.select_slider(
+                "Prioridade",
+                options=["Baixa", "Média", "Alta", "Urgente"],
+                value="Média"
+            )
+            
+            due_date = st.date_input("Data Limite")
+            
+            submitted = st.form_submit_button("➕ Adicionar Tarefa")
+            
+            if submitted and task_title:
+                task_data = {
+                    "title": task_title,
+                    "description": task_description,
+                    "category": task_category,
+                    "estimated_time": estimated_duration,
+                    "priority": priority,
+                    "due_date": str(due_date)
+                }
+                
+                # Chamar API real para agendar tarefa
+                with st.spinner("Processando com IA..."):
+                    result = schedule_task_api(task_data)
+                
+                if result and result.get("success"):
+                    st.success(f"✅ Tarefa '{task_title}' agendada com sucesso!")
+                    
+                    # Mostrar sugestão real da IA
+                    col1, col2, col3 = st.columns(3)
+                    with col1:
+                        confidence = result.get('confidence', 0)
+                        st.metric("Confiança IA", f"{confidence:.2f}" if isinstance(confidence, (int, float)) else "N/A")
+                    with col2:
+                        st.metric("Horário Sugerido", result.get('scheduled_time', 'N/A'))
+                    with col3:
+                        st.metric("Task ID", result.get('task_id', 'N/A'))
+                    
+                    reasoning = result.get('reasoning', 'Análise não disponível')
+                    st.info(f"🧠 Reasoning: {reasoning}")
+                    
+                    # Mostrar alternativas se disponíveis
+                    alternatives = result.get('alternatives', [])
+                    if alternatives:
+                        st.subheader("🔄 Horários Alternativos")
+                        for i, alt in enumerate(alternatives[:3], 1):
+                            st.write(f"{i}. {alt}")
+                else:
+                    st.error("❌ Erro ao agendar tarefa - verifique os logs acima para detalhes")
+            elif submitted:
+                st.warning("⚠️ Por favor, preencha pelo menos o título da tarefa")
+        
+        st.divider()
+        
+        # Quick actions
+        st.subheader("🎯 Ações Rápidas")
+        
+        if st.button("🩺 Testar API"):
+            with st.spinner("Testando conexão..."):
+                health_check = call_api("/")
+                if health_check:
+                    st.success(f"✅ API funcionando: {health_check.get('message', 'OK')}")
+                else:
+                    st.error("❌ API não está respondendo")
+        
+        if st.button("📊 Gerar Relatório"):
+            with st.spinner("Gerando relatório..."):
+                analytics = get_performance_analytics()
+                if analytics and analytics.get("success"):
+                    st.success("✅ Relatório atualizado!")
+                    st.rerun()  # Recarrega a página para mostrar novos dados
+                else:
+                    st.error("❌ Erro ao gerar relatório")
+        
+        if st.button("🔄 Sincronizar Notion"):
+            with st.spinner("Sincronizando com Notion..."):
+                # Chamada para sincronizar - pode ser um endpoint específico
+                health_check = call_api("/")
+                if health_check:
+                    st.success("✅ Sincronização com Notion realizada!")
+                    st.rerun()  # Recarrega os dados
+                else:
+                    st.error("❌ Erro na sincronização")
+    
+    # Create tabs
+    tab1, tab2, tab3 = st.tabs(["⏰ Time Patterns", "📂 Categories", "🎯 Insights"])
+    
     with tab1:
-        st.subheader("⏰ Optimal Time Slots")
+        st.subheader("⏰ Padrões de Tempo")
         
-        # Mock data for time patterns
-        time_data = {
-            "Morning (8-12h)": {"efficiency": 0.92, "sample_size": 45},
-            "Afternoon (12-17h)": {"efficiency": 0.78, "sample_size": 38},
-            "Evening (17-20h)": {"efficiency": 0.65, "sample_size": 22}
-        }
+        # Buscar dados reais de padrões
+        patterns_data = get_user_patterns()
         
-        for period, data in time_data.items():
-            col1, col2, col3 = st.columns([2, 1, 1])
-            with col1:
-                st.write(f"**{period}**")
-            with col2:
-                st.metric("Efficiency", f"{data['efficiency']:.2f}")
-            with col3:
-                st.metric("Tasks", data['sample_size'])
+        if patterns_data and patterns_data.get("success"):
+            patterns = patterns_data.get("patterns", [])
+            if patterns:
+                st.success(f"✅ {len(patterns)} padrões identificados")
+                
+                for pattern in patterns[:5]:  # Mostrar top 5
+                    col1, col2, col3 = st.columns([2, 1, 1])
+                    with col1:
+                        st.write(f"**{pattern.get('period', 'N/A')}**")
+                    with col2:
+                        efficiency = pattern.get('efficiency', 0)
+                        st.metric("Eficiência", f"{efficiency:.2f}")
+                    with col3:
+                        sample_size = pattern.get('sample_size', 0)
+                        st.metric("Amostras", sample_size)
+            else:
+                st.info("📊 Ainda coletando dados para identificar padrões...")
+        else:
+            st.warning("⚠️ Não foi possível carregar padrões. Verifique a conexão com a API.")
     
     with tab2:
-        st.subheader("📂 Category Performance")
+        st.subheader("📂 Performance por Categoria")
         
-        categories = ["Development", "Meetings", "Planning", "Documentation"]
-        efficiencies = [0.89, 0.82, 0.76, 0.71]
+        # Buscar analytics reais
+        analytics_data = get_performance_analytics()
         
-        fig = px.bar(x=categories, y=efficiencies, title="Efficiency by Task Category")
-        st.plotly_chart(fig, use_container_width=True)
+        if analytics_data and analytics_data.get("success"):
+            performance = analytics_data.get("recent_performance", {})
+            
+            # Verificar se performance é um dicionário válido
+            if isinstance(performance, dict) and performance:
+                # Extrair dados para gráfico
+                categories = []
+                efficiencies = []
+                
+                for cat, data in performance.items():
+                    if isinstance(data, dict):
+                        categories.append(cat)
+                        efficiencies.append(data.get('efficiency', 0))
+                    elif isinstance(data, (int, float)):
+                        # Se data é um número, tratar como eficiência direta
+                        categories.append(cat)
+                        efficiencies.append(data)
+                
+                if categories and efficiencies:
+                    fig = px.bar(
+                        x=categories, 
+                        y=efficiencies, 
+                        title="Eficiência por Categoria de Tarefa",
+                        color=efficiencies,
+                        color_continuous_scale="RdYlGn"
+                    )
+                    fig.update_layout(yaxis_title="Eficiência", xaxis_title="Categoria")
+                    st.plotly_chart(fig, use_container_width=True)
+                    
+                    # Mostrar detalhes
+                    st.subheader("📊 Detalhes por Categoria")
+                    for cat, data in performance.items():
+                        col1, col2, col3 = st.columns(3)
+                        with col1:
+                            if isinstance(data, dict):
+                                efficiency = data.get('efficiency', 0)
+                                completed = data.get('completed_tasks', 'N/A')
+                                avg_time = data.get('avg_time', 0)
+                            else:
+                                efficiency = data if isinstance(data, (int, float)) else 0
+                                completed = 'N/A'
+                                avg_time = 0
+                            
+                            st.metric(f"{cat} - Eficiência", f"{efficiency:.2f}")
+                        with col2:
+                            st.metric("Tarefas Concluídas", completed)
+                        with col3:
+                            st.metric("Tempo Médio", f"{avg_time:.0f}min" if isinstance(avg_time, (int, float)) else "N/A")
+                else:
+                    st.info("📊 Dados insuficientes para análise por categoria")
+            else:
+                st.info("📊 Ainda coletando dados de performance...")
+        else:
+            st.warning("⚠️ Não foi possível carregar analytics. Verifique a conexão com a API.")
     
     with tab3:
-        st.subheader("🎯 Discovered Preferences")
+        st.subheader("🎯 Insights da IA")
         
-        preferences = [
-            "✅ Prefers development tasks in the morning",
-            "✅ Works best with 90-minute focus blocks",
-            "✅ Needs 15-minute breaks between different task types",
-            "✅ More productive on Tuesday-Thursday",
-            "⚠️ Tends to underestimate development tasks by 20%",
-            "⚠️ Energy drops significantly after lunch"
-        ]
+        # Buscar tendências de feedback
+        analytics_data = get_performance_analytics()
         
-        for pref in preferences:
-            if pref.startswith("✅"):
-                st.success(pref)
+        if analytics_data and analytics_data.get("success"):
+            feedback_trends = analytics_data.get("feedback_trends", {})
+            
+            # Verificar se feedback_trends é um dicionário válido
+            if isinstance(feedback_trends, dict) and feedback_trends:
+                st.subheader("📈 Tendências Identificadas")
+                
+                # Mostrar insights baseados nos dados
+                insights = []
+                
+                # Analisar tendências para gerar insights de forma segura
+                avg_rating = feedback_trends.get('average_rating', 0)
+                if isinstance(avg_rating, (int, float)) and avg_rating > 0:
+                    if avg_rating > 4:
+                        insights.append(("✅", f"Alta satisfação geral (Rating: {avg_rating:.1f}/5)"))
+                    elif avg_rating > 3:
+                        insights.append(("⚠️", f"Satisfação moderada (Rating: {avg_rating:.1f}/5)"))
+                    else:
+                        insights.append(("❌", f"Satisfação baixa (Rating: {avg_rating:.1f}/5)"))
+                
+                best_category = feedback_trends.get('best_performing_category')
+                if best_category and isinstance(best_category, str):
+                    insights.append(("✅", f"Melhor performance: {best_category}"))
+                
+                worst_category = feedback_trends.get('worst_performing_category')
+                if worst_category and isinstance(worst_category, str):
+                    insights.append(("⚠️", f"Precisa melhorar: {worst_category}"))
+                
+                total_tasks = feedback_trends.get('total_tasks_analyzed', 0)
+                if isinstance(total_tasks, int) and total_tasks > 0:
+                    insights.append(("📊", f"Total de tarefas analisadas: {total_tasks}"))
+                
+                # Se não há insights, mostrar mensagem padrão
+                if not insights:
+                    insights.append(("📊", "Dados de feedback disponíveis"))
+                
+                # Mostrar insights
+                for icon, text in insights:
+                    if icon == "✅":
+                        st.success(f"{icon} {text}")
+                    elif icon == "⚠️":
+                        st.warning(f"{icon} {text}")
+                    elif icon == "❌":
+                        st.error(f"{icon} {text}")
+                    else:
+                        st.info(f"{icon} {text}")
+                
+                # Mostrar gráfico de tendências se disponível
+                if 'daily_ratings' in feedback_trends and isinstance(feedback_trends['daily_ratings'], dict):
+                    st.subheader("📊 Evolução das Avaliações")
+                    daily_data = feedback_trends['daily_ratings']
+                    if daily_data:
+                        try:
+                            df = pd.DataFrame(list(daily_data.items()), columns=['Data', 'Rating'])
+                            df['Data'] = pd.to_datetime(df['Data'])
+                            
+                            fig = px.line(df, x='Data', y='Rating', title='Evolução do Rating Diário')
+                            fig.update_layout(yaxis_range=[1, 5])
+                            st.plotly_chart(fig, use_container_width=True)
+                        except Exception as e:
+                            st.error(f"Erro ao gerar gráfico de tendências: {e}")
             else:
-                st.warning(pref)
+                st.info("🤖 A IA ainda está coletando dados para gerar insights...")
+        else:
+            st.warning("⚠️ Não foi possível carregar insights. Verifique a conexão com a API.")
 
 def settings_page():
     st.header("⚙️ Settings")
@@ -119,34 +371,12 @@ def settings_page():
             if st.button("🗑️ Clear Learning Data"):
                 st.warning("This will reset all learned patterns!")
 
-def display_demo_suggestion(task_data):
-    """Displays a demo suggestion when API is not available"""
-    st.success("🎯 Demo AI Suggestion Generated!")
-    
-    col1, col2, col3 = st.columns(3)
-    
-    with col1:
-        st.metric("Confidence Score", "0.89", "High")
-    
-    with col2:
-        st.metric("Suggested Time", "09:30", "Tomorrow")
-    
-    with col3:
-        st.metric("Success Probability", "87%", "↗️ +5%")
-    
-    st.subheader("🧠 AI Reasoning")
-    reasoning = f"Based on your productivity patterns, {task_data['category'].lower()} tasks perform best in the morning when your energy is highest. The suggested time aligns with your peak focus period."
-    st.info(reasoning)
-    
-    st.subheader("🔄 Alternative Times")
-    alternatives = [
-        "1. 10:00-11:30 - Score: 0.85",
-        "2. 14:00-15:30 - Score: 0.72", 
-        "3. 15:30-17:00 - Score: 0.68"
-    ]
-    
-    for alt in alternatives:
-        st.write(alt)
 
 if __name__ == "__main__":
-    main()
+    # Navegação principal
+    page = st.sidebar.selectbox("Navegar", ["Dashboard", "Configurações"])
+    
+    if page == "Dashboard":
+        main()
+    else:
+        settings_page()
