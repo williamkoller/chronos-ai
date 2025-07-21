@@ -1,0 +1,12 @@
+name: gpt-3.5-turbo
+backend: llama-cpp
+parameters:
+  model: gpt-3.5-turbo
+  context_size: 512
+  threads: 4
+  f16: true
+  temperature: 0.7
+  top_p: 0.9
+template:
+  completion: '{{.Input}}'
+  chat: "Q: {{.Input}}\nA:"

@@ -1,0 +1,11 @@
+[server]
+maxUploadSize = 50
+maxMessageSize = 50
+enableCORS = false
+enableXsrfProtection = false
+
+[client]
+toolbarMode = "minimal"
+
+[browser]
+gatherUsageStats = false 

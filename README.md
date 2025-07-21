@@ -1,152 +1,275 @@
 # 🤖 CHRONOS AI - Intelligent Time Orchestrator
 
-AI-powered task scheduling system that learns your productivity patterns and optimizes your schedule.
+AI-powered task scheduling system que aprende seus padrões de produtividade e otimiza sua agenda usando **IA Local**.
 
 ## ✨ Features
 
-- **🧠 AI-Powered Scheduling**: Uses Claude LLM for intelligent task placement
-- **📊 Pattern Learning**: Analyzes your productivity patterns automatically
-- **🔄 Continuous Improvement**: Learns from feedback to improve suggestions
-- **📱 Multiple Interfaces**: API, Web Dashboard, and Mobile (coming soon)
-- **🔌 Notion Integration**: Seamless integration with your existing workflow
+- **🧠 IA Local**: Usa Ollama com modelos como Llama 3.2 para agendamento inteligente
+- **📊 Análise de Padrões**: Analisa automaticamente seus padrões de produtividade
+- **🔄 Melhoria Contínua**: Aprende com feedback para aprimorar sugestões
+- **📱 Múltiplas Interfaces**: API, Dashboard Web e Mobile (em breve)
+- **🔌 Integração Notion**: Integração perfeita com seu workflow existente
+- **🏠 100% Local**: Sem dependências de APIs externas caras
 
-## 🏗️ Architecture
+## 🏗️ Arquitetura
 
 ```
 chronos-ai/
-├── 📁 core/              # Core scheduling engine
-├── 📁 integrations/      # External API clients (Notion, Claude)
-├── 📁 learning/          # Pattern analysis and feedback processing
-├── 📁 api/              # REST API endpoints
-├── 📁 dashboard/        # Streamlit web dashboard
-└── 📁 mobile/           # Mobile app (future)
+├── 📁 core/              # Motor de agendamento principal
+├── 📁 integrations/      # Clientes API (Notion, IA Local)
+├── 📁 learning/          # Análise de padrões e processamento de feedback
+├── 📁 api/              # Endpoints REST API
+├── 📁 dashboard/        # Dashboard web Streamlit
+├── 📁 docker-compose.yml # Orquestração completa com Ollama
+└── 📁 scripts/          # Scripts de teste e configuração
 ```
 
 ## 🚀 Quick Start
 
-1. **Clone the repository**
+### **Método 1: Docker (Recomendado)**
 
 ```bash
+# 1. Clone o repositório
 git clone https://github.com/yourusername/chronos-ai
 cd chronos-ai
-```
 
-2. **Set up environment**
-
-```bash
-pip install -r requirements.txt
+# 2. Configure ambiente
 cp .env.example .env
-# Edit .env with your API keys
+# Edite .env com seu token do Notion
+
+# 3. Inicie tudo com Docker
+docker-compose up -d
+
+# 4. Configure modelos IA (automático na primeira execução)
+# Ollama irá baixar llama3.2:3b automaticamente
 ```
 
-3. **Run with Docker**
+### **Método 2: Local Development**
 
 ```bash
-docker-compose up -d
+# 1. Instale dependências
+pip install -r requirements.txt
+
+# 2. Inicie Ollama localmente
+docker run -d -p 11434:11434 --name ollama ollama/ollama
+docker exec ollama ollama pull llama3.2:3b
+
+# 3. Configure .env
+cp .env.example .env
+# Adicione NOTION_TOKEN e DATABASE_ID
+
+# 4. Teste a integração
+python test_ai_integration.py
+
+# 5. Inicie API
+python api/main.py
 ```
 
-4. **Access the dashboard**
+## 🔧 Configuração
 
-- Dashboard: http://localhost:8501
-- API: http://localhost:8000
-- API Docs: http://localhost:8000/docs
+### **Configuração Automática (.env)**
+
+```bash
+# Notion Configuration
+NOTION_TOKEN=ntn_seu_token_aqui
+DATABASE_ID=sua_database_id_aqui
+
+# IA Local Configuration (Ollama)
+OLLAMA_URL=http://ollama:11434
+OLLAMA_MODEL=llama3.2:3b
+
+# Database Configuration
+DB_PASSWORD=sua_senha_postgres
+```
+
+### **Setup Notion**
+
+```bash
+# Execute o script de configuração automática
+python setup_notion_database.py
+
+# Ou configure manualmente:
+# 1. Crie integração em https://developers.notion.com
+# 2. Compartilhe database com a integração
+# 3. Execute verificação:
+python check_properties.py
+```
+
+### **Verificação de IA Local**
+
+```bash
+# Teste completo da IA
+python test_local_ai.py
+
+# Teste de integração
+python test_ai_integration.py
+
+# Setup automático de modelos
+python setup_ollama_models.py
+```
+
+## 📊 Acesso aos Serviços
+
+Após `docker-compose up -d`:
+
+- **Dashboard**: http://localhost:8501
+- **API**: http://localhost:8000
+- **API Docs**: http://localhost:8000/docs
+- **Ollama API**: http://localhost:11434
 
 ## 📖 Usage
 
-### API Example
+### **API Example**
 
 ```python
 import requests
 
-# Schedule a task
+# Agendar uma tarefa
 task_data = {
-    "title": "Review project proposal",
+    "title": "Revisar proposta do projeto",
     "category": "Planning",
     "priority": "High",
-    "estimated_time": 90
+    "estimated_time": 90,
+    "description": "Análise detalhada da proposta Q2"
 }
 
 response = requests.post("http://localhost:8000/schedule/task", json=task_data)
 suggestion = response.json()
 
-print(f"Best time: {suggestion['scheduled_time']}")
-print(f"Confidence: {suggestion['confidence']}")
+print(f"Melhor horário: {suggestion['scheduled_time']}")
+print(f"Confiança IA: {suggestion['confidence']}")
+print(f"Raciocínio: {suggestion['reasoning']}")
 ```
 
-### Dashboard Usage
+### **Dashboard Usage**
 
-1. Open http://localhost:8501
-2. Navigate to "Schedule Task"
-3. Fill in task details
-4. Get AI-powered suggestion
-5. Provide feedback to improve future suggestions
+1. Abra http://localhost:8501
+2. Navegue para "Schedule Task"
+3. Preencha detalhes da tarefa
+4. Receba sugestão da IA local
+5. Forneça feedback para melhorar futuras sugestões
 
-## 🧠 How It Learns
+## 🧠 Como Aprende
 
-CHRONOS AI uses several learning mechanisms:
+CHRONOS AI usa mecanismos de aprendizado locais:
 
-1. **Pattern Analysis**: Analyzes your completed tasks to identify productivity patterns
-2. **Feedback Processing**: Learns from your ratings and actions on suggestions
-3. **Continuous Adaptation**: Adjusts recommendations based on new data
-4. **Context Awareness**: Considers factors like time of day, task type, and workload
+1. **Análise de Padrões**: Analisa tarefas concluídas para identificar padrões de produtividade
+2. **Processamento de Feedback**: Aprende com suas avaliações e ações
+3. **Adaptação Contínua**: Ajusta recomendações baseado em novos dados
+4. **Consciência de Contexto**: Considera fatores como hora do dia, tipo de tarefa, carga de trabalho
+5. **IA Local**: Usa modelos Llama para sugestões inteligentes sem APIs externas
 
-## 🔧 Configuration
+## 🔧 Modelos IA Disponíveis
 
-### Notion Setup
+### **Modelos Padrão**
 
-1. Create a Notion integration at https://developers.notion.com
-2. Share your database with the integration
-3. Add these properties to your database:
-   - Name (Title)
-   - Category (Select)
-   - Priority (Select)
-   - Status (Select)
-   - Estimated Time (Number)
-   - Actual Time (Number)
-   - Scheduled Time (Date)
+- **llama3.2:3b** (Padrão) - Rápido e eficiente (~2GB)
+- **mistral:7b** - Equilíbrio qualidade/velocidade (~4GB)
+- **codellama:7b** - Especializado em código (~4GB)
 
-### Claude API Setup
+### **Trocar Modelo**
 
-1. Get API key from https://console.anthropic.com
-2. Add to your .env file
+```bash
+# No .env
+OLLAMA_MODEL=mistral:7b
+
+# Ou baixar manualmente
+docker exec ollama ollama pull mistral:7b
+```
+
+## 🛠️ Scripts de Manutenção
+
+```bash
+# Verificar sistema completo
+python test_ai_integration.py
+
+# Configurar Notion automaticamente
+python setup_notion_database.py
+
+# Verificar propriedades Notion
+python check_properties.py
+
+# Diagnosticar Notion
+python integrations/notion_diagnostic.py
+
+# Setup modelos Ollama
+python setup_ollama_models.py
+
+# Testar IA local
+python test_local_ai.py
+```
 
 ## 📊 Analytics
 
-CHRONOS AI provides detailed analytics:
+CHRONOS AI fornece analytics detalhados:
 
-- Productivity trends over time
-- Peak performance hours
-- Category efficiency analysis
-- Estimation accuracy tracking
-- Feedback trends
+- Tendências de produtividade ao longo do tempo
+- Horários de pico de performance
+- Análise de eficiência por categoria
+- Rastreamento de precisão de estimativas
+- Tendências de feedback
+- Métricas de IA local
 
 ## 🔮 Roadmap
 
-- [ ] 📱 Mobile app (iOS/Android)
-- [ ] 📅 Google Calendar integration
-- [ ] 💬 Slack bot interface
-- [ ] 🎯 Goal tracking and recommendations
-- [ ] 🤝 Team scheduling optimization
-- [ ] 🌍 Multi-timezone support
+- [x] 🤖 IA Local com Ollama (100% funcional)
+- [x] 🔌 Integração Notion completa
+- [x] 📊 Dashboard interativo
+- [ ] 📱 App Mobile (iOS/Android)
+- [ ] 📅 Integração Google Calendar
+- [ ] 💬 Bot Slack/Discord
+- [ ] 🎯 Tracking de objetivos
+- [ ] 🤝 Otimização para equipes
+- [ ] 🌍 Suporte multi-timezone
+- [ ] 🧠 Modelos IA especializados
+
+## 🚨 Troubleshooting
+
+### **Problemas Comuns**
+
+```bash
+# API não conecta
+docker logs chronos-ai_chronos-api_1
+
+# Ollama não responde
+docker logs chronos-ai_ollama_1
+curl http://localhost:11434/api/tags
+
+# Notion não conecta
+python test_notion_connection.py
+
+# IA não funciona
+python test_ai_integration.py
+```
+
+### **Reset Completo**
+
+```bash
+docker-compose down -v
+docker-compose up -d
+python setup_ollama_models.py
+```
 
 ## 🤝 Contributing
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests
-5. Submit a pull request
+1. Fork o repositório
+2. Crie uma branch feature
+3. Faça suas mudanças
+4. Adicione testes
+5. Submeta pull request
 
 ## 📄 License
 
-MIT License - see LICENSE file for details
+MIT License - veja arquivo LICENSE para detalhes
 
 ## 🆘 Support
 
-- 📧 Email: support@chronos-ai.com
-- 💬 Discord: https://discord.gg/chronos-ai
-- 📖 Docs: https://docs.chronos-ai.com
+- 🐛 Issues: GitHub Issues
+- 💬 Discussões: GitHub Discussions
+- 📖 Docs: README.md (este arquivo)
 
 ---
+
+**🎉 Powered by Local AI - Sem APIs externas, sem custos, 100% privado!**
 
 Made with ❤️ by the CHRONOS AI team

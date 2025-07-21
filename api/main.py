@@ -118,6 +118,10 @@ async def submit_feedback(feedback: FeedbackSubmit, background_tasks: Background
 async def optimize_daily_schedule(date: str):
     """Otimiza cronograma de um dia específico"""
     try:
+        # Verificar se chronos foi inicializado
+        if not chronos:
+            raise HTTPException(status_code=500, detail="CHRONOS não foi inicializado corretamente")
+        
         target_date = datetime.fromisoformat(date)
         optimization = chronos.ai.optimize_daily_schedule([], {})
         
@@ -136,6 +140,10 @@ async def optimize_daily_schedule(date: str):
 async def get_user_patterns():
     """Retorna padrões aprendidos do usuário"""
     try:
+        # Verificar se chronos foi inicializado
+        if not chronos:
+            raise HTTPException(status_code=500, detail="CHRONOS não foi inicializado corretamente")
+        
         patterns = chronos.analyzer.get_current_patterns()
         
         return {
@@ -152,6 +160,10 @@ async def get_user_patterns():
 async def get_performance_analytics():
     """Retorna analytics de performance"""
     try:
+        # Verificar se chronos foi inicializado
+        if not chronos:
+            raise HTTPException(status_code=500, detail="CHRONOS não foi inicializado corretamente")
+        
         feedback_trends = chronos.feedback.calculate_feedback_trends()
         recent_performance = chronos.analyzer.get_recent_performance()
         
@@ -174,4 +186,10 @@ async def process_feedback_async(feedback_data: Dict):
         print(f"❌ Erro no processamento do feedback: {e}")
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(
+        app, 
+        host="0.0.0.0", 
+        port=8000,
+        timeout_keep_alive=300,  # 5 minutos
+        timeout_graceful_shutdown=30
+    )

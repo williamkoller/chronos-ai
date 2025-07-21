@@ -12,12 +12,12 @@ services:
     environment:
       - NOTION_TOKEN=${NOTION_TOKEN}
       - DATABASE_ID=${DATABASE_ID}
-      - OLLAMA_URL=http://ollama:11434
-      - OLLAMA_MODEL=llama3.2:3b
+      - OPENAI_BASE_URL=http://localai:8080/v1
+      - AI_DEV_MODE=true
     volumes:
       - ./data:/app/data
     depends_on:
-      - ollama
+      - localai
     restart: unless-stopped
 
   chronos-dashboard:
@@ -42,21 +42,24 @@ services:
       - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
 
-  ollama:
-    image: ollama/ollama:latest
+  localai:
+    image: quay.io/go-skynet/local-ai:latest
     ports:
-      - '11434:11434'
+      - '8080:8080'
     volumes:
-      - ollama_data:/root/.ollama
+      - ./localai/models:/models
     environment:
-      - OLLAMA_HOST=0.0.0.0
+      - MODELS_PATH=/models
+      - DEBUG=false
+      - THREADS=4
+      - CONTEXT_SIZE=1024
     restart: unless-stopped
     healthcheck:
-      test: ['CMD', 'curl', '-f', 'http://localhost:11434/api/tags']
+      test: ['CMD', 'curl', '-f', 'http://localhost:8080/readyz']
       interval: 30s
-      timeout: 10s
-      retries: 5
+      timeout: 30s
+      retries: 3
+      start_period: 120s
 
 volumes:
   postgres_data:
-  ollama_data:

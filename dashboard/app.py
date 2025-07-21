@@ -1,6 +1,5 @@
 import streamlit as st
 import requests
-import json
 import plotly.graph_objects as go
 import plotly.express as px
 import pandas as pd
@@ -24,9 +23,9 @@ def call_api(endpoint: str, method: str = "GET", data: dict = None):
     try:
         url = f"{API_BASE_URL}{endpoint}"
         if method == "GET":
-            response = requests.get(url, timeout=10)
+            response = requests.get(url, timeout=60)
         elif method == "POST":
-            response = requests.post(url, json=data, timeout=10)
+            response = requests.post(url, json=data, timeout=60)
         
         if response.status_code == 200:
             return response.json()
@@ -328,9 +327,7 @@ def settings_page():
     with tab1:
         st.subheader("API Configuration")
         
-        notion_token = st.text_input("Notion Integration Token", type="password")
-        database_id = st.text_input("Notion Database ID")
-        claude_key = st.text_input("Claude API Key", type="password")
+        st.info("🏠 IA Local: LocalAI configurado automaticamente - sem necessidade de API keys!")
         
         if st.button("Test Connection"):
             st.success("✅ All connections successful!")
