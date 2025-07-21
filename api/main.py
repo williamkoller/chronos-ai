@@ -36,8 +36,8 @@ class ScheduleOptimize(BaseModel):
 # Configuração global
 config = {
     'notion_token': os.getenv('NOTION_TOKEN'),
-    'database_id': os.getenv('DATABASE_ID'), 
-    'claude_api_key': os.getenv('CLAUDE_API_KEY')
+    'database_id': os.getenv('DATABASE_ID')
+    # IA local (Ollama) - não precisa de configuração de API key
 }
 
 # Inicializa CHRONOS
@@ -119,7 +119,7 @@ async def optimize_daily_schedule(date: str):
     """Otimiza cronograma de um dia específico"""
     try:
         target_date = datetime.fromisoformat(date)
-        optimization = chronos.claude.optimize_daily_schedule([], {})
+        optimization = chronos.ai.optimize_daily_schedule([], {})
         
         return {
             "success": True,

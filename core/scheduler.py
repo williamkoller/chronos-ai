@@ -11,17 +11,16 @@ class ChronosCore:
         
         # Inicializa componentes
         from integrations.notion_client import NotionClient
-        from integrations.claude_client import ClaudeClient
+        from integrations.ai_client import AIClient
         from learning.pattern_analyzer import PatternAnalyzer
         from learning.feedback_processor import FeedbackProcessor
         
         # Inicializar com fallbacks para tokens ausentes
         notion_token = config.get('notion_token') or ''
         database_id = config.get('database_id') or ''
-        claude_key = config.get('claude_api_key') or ''
         
         self.notion = NotionClient(notion_token, database_id)
-        self.claude = ClaudeClient(claude_key)
+        self.ai = AIClient()  # IA local - não precisa de token
         self.analyzer = PatternAnalyzer()
         self.feedback = FeedbackProcessor()
         
@@ -31,15 +30,13 @@ class ChronosCore:
             missing_configs.append("NOTION_TOKEN")
         if not database_id:
             missing_configs.append("DATABASE_ID")
-        if not claude_key:
-            missing_configs.append("CLAUDE_API_KEY")
         
         if missing_configs:
             print(f"🔧 Configuração: {len(missing_configs)} variável(is) ausente(s): {', '.join(missing_configs)}")
             print(f"📖 Modo: Demonstração (funcionalidade limitada)")
             print(f"💡 Para integração completa, configure: {', '.join(missing_configs)}")
         else:
-            print(f"✅ Configuração: Todas as integrações configuradas")
+            print(f"✅ Configuração: Todas as integrações configuradas (IA Local + Notion)")
         
         print(f"🤖 CHRONOS AI v{self.version} initialized - Session: {self.session_id}")
     
@@ -52,24 +49,20 @@ class ChronosCore:
         # 2. Analisa padrões do usuário
         user_patterns = self.analyzer.get_current_patterns()
         
-        # 3. Gera sugestão inteligente
+        # 3. Gera sugestão inteligente com IA local
         try:
-            if self.config.get('claude_api_key'):
-                print(f"🤖 Claude: Gerando sugestão inteligente para '{task_data.get('title', 'Tarefa')}'")
-                suggestion = self.claude.generate_schedule_suggestion(
-                    task_data, user_patterns, context
-                )
-                if suggestion and isinstance(suggestion, dict) and suggestion.get('scheduled_datetime'):
-                    print(f"🤖 Claude: ✅ Sugestão IA gerada com sucesso")
-                else:
-                    print(f"🤖 Claude: ❌ Falha na geração - usando fallback local")
-                    suggestion = self._generate_fallback_suggestion(task_data)
+            print(f"🤖 IA Local: Gerando sugestão para '{task_data.get('title', 'Tarefa')}'")
+            suggestion = self.ai.generate_schedule_suggestion(
+                task_data, user_patterns, context
+            )
+            if suggestion and isinstance(suggestion, dict) and suggestion.get('scheduled_datetime'):
+                print(f"🤖 IA Local: ✅ Sugestão gerada com sucesso")
             else:
-                print(f"🤖 Fallback: Usando algoritmo local (Claude não configurado)")
+                print(f"🤖 IA Local: ❌ Falha na geração - usando fallback")
                 suggestion = self._generate_fallback_suggestion(task_data)
         except Exception as e:
             error_type = type(e).__name__
-            print(f"🤖 Claude: ❌ Erro [{error_type}] - fallback ativado")
+            print(f"🤖 IA Local: ❌ Erro [{error_type}] - fallback ativado")
             suggestion = self._generate_fallback_suggestion(task_data)
         
         # 4. Valida e otimiza
