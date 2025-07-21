@@ -26,3 +26,4 @@ platformdirs==4.3.8
 # Utilities
 jmespath==1.0.1
 tzdata==2025.2
+python-dotenv>=1.0.0

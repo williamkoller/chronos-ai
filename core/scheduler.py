@@ -75,7 +75,23 @@ class ChronosCore:
         # 4. Valida e otimiza
         optimized_suggestion = self._optimize_suggestion(suggestion, context)
         
-        # 5. Prepara resposta
+        # 5. Cria tarefa no Notion (se configurado)
+        notion_task_id = None
+        if self.config.get('notion_token') and self.config.get('database_id'):
+            try:
+                print(f"📝 Criando tarefa no Notion...")
+                notion_task_id = self.notion.create_task(task_data, optimized_suggestion)
+                if notion_task_id:
+                    print(f"✅ Tarefa criada no Notion: {notion_task_id[:8]}...")
+                    optimized_suggestion['notion_task_id'] = notion_task_id
+                else:
+                    print(f"⚠️ Falha ao criar tarefa no Notion")
+            except Exception as e:
+                print(f"❌ Erro ao criar tarefa no Notion: {e}")
+        else:
+            print(f"⚠️ Notion não configurado - tarefa não será salva")
+        
+        # 6. Prepara resposta
         return {
             'session_id': self.session_id,
             'task': task_data,
@@ -83,7 +99,8 @@ class ChronosCore:
             'context': context,
             'confidence': optimized_suggestion.get('confidence', 0.5),
             'reasoning': optimized_suggestion.get('reasoning', ''),
-            'alternatives': optimized_suggestion.get('alternatives', [])
+            'alternatives': optimized_suggestion.get('alternatives', []),
+            'notion_task_id': notion_task_id
         }
     
     def _gather_context(self) -> Dict:
