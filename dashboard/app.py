@@ -63,9 +63,21 @@ def main():
     with st.sidebar:
         st.header("📝 Adicionar Nova Tarefa")
         
-        with st.form("task_form"):
-            task_title = st.text_input("Título da Tarefa", placeholder="Ex: Revisar documentação")
-            task_description = st.text_area("Descrição", placeholder="Detalhes da tarefa...")
+        # Inicializar session state para controle do formulário
+        if "last_task_result" not in st.session_state:
+            st.session_state.last_task_result = None
+        if "form_counter" not in st.session_state:
+            st.session_state.form_counter = 0
+        
+        with st.form("task_form", clear_on_submit=True):
+            task_title = st.text_input(
+                "Título da Tarefa", 
+                placeholder="Ex: Revisar documentação"
+            )
+            task_description = st.text_area(
+                "Descrição", 
+                placeholder="Detalhes da tarefa..."
+            )
             
             task_category = st.selectbox(
                 "Categoria",
@@ -99,31 +111,55 @@ def main():
                     result = schedule_task_api(task_data)
                 
                 if result and result.get("success"):
-                    st.success(f"✅ Tarefa '{task_title}' agendada com sucesso!")
+                    # Armazenar resultado para mostrar após limpeza
+                    st.session_state.last_task_result = {
+                        "task_title": task_title,
+                        "result": result,
+                        "timestamp": task_title  # Para identificar se é novo
+                    }
+                    st.session_state.form_counter += 1
                     
-                    # Mostrar sugestão real da IA
-                    col1, col2, col3 = st.columns(3)
-                    with col1:
-                        confidence = result.get('confidence', 0)
-                        st.metric("Confiança IA", f"{confidence:.2f}" if isinstance(confidence, (int, float)) else "N/A")
-                    with col2:
-                        st.metric("Horário Sugerido", result.get('scheduled_time', 'N/A'))
-                    with col3:
-                        st.metric("Task ID", result.get('task_id', 'N/A'))
-                    
-                    reasoning = result.get('reasoning', 'Análise não disponível')
-                    st.info(f"🧠 Reasoning: {reasoning}")
-                    
-                    # Mostrar alternativas se disponíveis
-                    alternatives = result.get('alternatives', [])
-                    if alternatives:
-                        st.subheader("🔄 Horários Alternativos")
-                        for i, alt in enumerate(alternatives[:3], 1):
-                            st.write(f"{i}. {alt}")
+                    # Mensagem simples dentro do formulário
+                    st.success(f"✅ Tarefa '{task_title}' agendada! Veja detalhes abaixo.")
                 else:
                     st.error("❌ Erro ao agendar tarefa - verifique os logs acima para detalhes")
             elif submitted:
                 st.warning("⚠️ Por favor, preencha pelo menos o título da tarefa")
+        
+        # Mostrar último resultado fora do formulário (sempre visível)
+        if st.session_state.last_task_result:
+            last_result = st.session_state.last_task_result
+            result = last_result["result"]
+            task_title = last_result["task_title"]
+            
+            st.divider()
+            st.subheader("📋 Última Tarefa Agendada")
+            st.success(f"✅ Tarefa '{task_title}' agendada com sucesso!")
+            
+            # Mostrar métricas da IA
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                confidence = result.get('confidence', 0)
+                st.metric("Confiança IA", f"{confidence:.2f}" if isinstance(confidence, (int, float)) else "N/A")
+            with col2:
+                st.metric("Horário Sugerido", result.get('scheduled_time', 'N/A'))
+            with col3:
+                st.metric("Task ID", result.get('task_id', 'N/A'))
+            
+            reasoning = result.get('reasoning', 'Análise não disponível')
+            st.info(f"🧠 Reasoning: {reasoning}")
+            
+            # Mostrar alternativas
+            alternatives = result.get('alternatives', [])
+            if alternatives:
+                st.subheader("🔄 Horários Alternativos")
+                for i, alt in enumerate(alternatives[:3], 1):
+                    st.write(f"{i}. {alt}")
+            
+            # Botão para limpar histórico
+            if st.button("🗑️ Limpar Histórico"):
+                st.session_state.last_task_result = None
+                st.rerun()
         
         st.divider()
         

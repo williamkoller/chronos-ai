@@ -65,8 +65,6 @@ class NotionClient:
             "properties": self._build_task_properties(task_data, schedule_info)
         }
         
-        # Debug: mostra o payload
-        print(f"🔍 Payload sendo enviado:")
         
         try:
             response = requests.post(url, headers=self.headers, json=payload)
