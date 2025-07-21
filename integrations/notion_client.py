@@ -67,8 +67,6 @@ class NotionClient:
         
         # Debug: mostra o payload
         print(f"🔍 Payload sendo enviado:")
-        import json
-        print(json.dumps(payload, indent=2, ensure_ascii=False))
         
         try:
             response = requests.post(url, headers=self.headers, json=payload)

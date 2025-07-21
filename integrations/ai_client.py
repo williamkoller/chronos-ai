@@ -137,22 +137,59 @@ class AIClient:
         }
     
     def _generate_dev_patterns(self, tasks: List[Dict]) -> Dict:
-        """Padrões simulados"""
+        """Padrões simulados realistas"""
+        hours = ['09:00', '10:00', '11:00', '14:00', '15:00', '16:00']
+        patterns = []
+        
+        for i, hour in enumerate(hours):
+            efficiency = random.uniform(0.6, 0.95)
+            sample_size = random.randint(5, 25)
+            patterns.append({
+                "period": f"{hour}-{int(hour[:2])+1:02d}:00",
+                "efficiency": efficiency,
+                "sample_size": sample_size,
+                "confidence": min(sample_size / 20, 1.0)
+            })
+        
         return {
+            "hourly_productivity": {
+                hour: {
+                    "efficiency": random.uniform(0.6, 0.95),
+                    "confidence": random.uniform(0.7, 0.9),
+                    "sample_size": random.randint(5, 25)
+                } for hour in ['9', '10', '11', '14', '15', '16', '17']
+            },
+            "patterns": patterns,
             "productivity_peak": f"{random.randint(9, 11)}:00",
-            "preferred_categories": ["Development", "Research"],
+            "preferred_categories": ["Development", "Research", "Planning"],
             "avg_task_duration": random.randint(45, 90),
             "efficiency_score": random.uniform(0.7, 0.9),
-            "total_tasks_analyzed": len(tasks)
+            "total_tasks_analyzed": len(tasks) or random.randint(15, 50)
         }
     
     def _generate_dev_feedback(self, feedback_data: Dict) -> Dict:
-        """Feedback simulado"""
+        """Feedback simulado com dados de performance"""
+        categories = ["Development", "Meetings", "Research", "Documentation", "Planning"]
+        
         return {
             "learning_applied": True,
             "confidence_adjustment": random.uniform(-0.1, 0.1),
             "pattern_updates": ["time_preference", "duration_estimation"],
-            "feedback_processed": True
+            "feedback_processed": True,
+            "recent_performance": {
+                category: {
+                    "efficiency": random.uniform(0.6, 0.95),
+                    "avg_duration": random.randint(30, 120),
+                    "completion_rate": random.uniform(0.7, 0.95),
+                    "satisfaction": random.randint(3, 5)
+                } for category in categories
+            },
+            "feedback_trends": {
+                "average_rating": random.uniform(3.5, 4.8),
+                "rating_trend": random.choice(["improving", "stable", "declining"]),
+                "total_feedback_count": random.randint(20, 100),
+                "improvement_needed": random.choice([True, False])
+            }
         }
     
     def _generate_dev_optimization(self, tasks: List[Dict]) -> Dict:

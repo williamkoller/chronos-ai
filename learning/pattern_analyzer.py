@@ -309,6 +309,47 @@ class PatternAnalyzer:
     
     def get_current_patterns(self) -> Dict:
         """Recupera padrões atuais do banco"""
+        import random
+        import os
+        
+        # Se estiver em modo dev, retorna dados simulados
+        if os.getenv('AI_DEV_MODE', 'true').lower() == 'true':
+            hours = ['09:00', '10:00', '11:00', '14:00', '15:00', '16:00']
+            patterns = []
+            
+            for hour in hours:
+                patterns.append({
+                    "period": f"{hour}-{int(hour[:2])+1:02d}:00",
+                    "efficiency": random.uniform(0.6, 0.95),
+                    "sample_size": random.randint(5, 25),
+                    "confidence": random.uniform(0.7, 0.9)
+                })
+            
+            return {
+                "hourly_productivity": {
+                    str(h): {
+                        "efficiency": random.uniform(0.6, 0.95),
+                        "confidence": random.uniform(0.7, 0.9),
+                        "sample_size": random.randint(5, 25)
+                    } for h in range(8, 19)  # 8h às 18h
+                },
+                "patterns": patterns,
+                "daily_productivity": {
+                    day: {
+                        "efficiency": random.uniform(0.6, 0.9),
+                        "confidence": random.uniform(0.6, 0.9),
+                        "sample_size": random.randint(3, 15)
+                    } for day in ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
+                },
+                "category_efficiency": {
+                    category: {
+                        "efficiency": random.uniform(0.6, 0.95),
+                        "confidence": random.uniform(0.7, 0.9),
+                        "sample_size": random.randint(5, 20)
+                    } for category in ["Development", "Meetings", "Research", "Documentation", "Planning"]
+                }
+            }
+        
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
         
@@ -352,6 +393,21 @@ class PatternAnalyzer:
     
     def get_recent_performance(self) -> Dict:
         """Obtém performance recente do usuário"""
+        import random
+        import os
+        
+        # Se estiver em modo dev, retorna dados simulados
+        if os.getenv('AI_DEV_MODE', 'true').lower() == 'true':
+            categories = ["Development", "Meetings", "Research", "Documentation", "Planning"]
+            return {
+                category: {
+                    "efficiency": random.uniform(0.6, 0.95),
+                    "avg_duration": random.randint(30, 120),
+                    "completion_rate": random.uniform(0.7, 0.95),
+                    "sample_size": random.randint(5, 30)
+                } for category in categories
+            }
+        
         # Implementa lógica para calcular performance das últimas tarefas
         return {
             'last_7_days_efficiency': 0.85,

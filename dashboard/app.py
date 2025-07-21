@@ -167,11 +167,35 @@ def main():
         patterns_data = get_user_patterns()
         
         if patterns_data and patterns_data.get("success"):
-            patterns = patterns_data.get("patterns", [])
+            all_patterns = patterns_data.get("patterns", {})
+            
+            # Verificar se patterns é um dict ou list
+            if isinstance(all_patterns, dict):
+                # Se for dict, pegar a lista de patterns ou criar uma a partir dos dados
+                pattern_list = all_patterns.get("patterns", [])
+                if not pattern_list and "hourly_productivity" in all_patterns:
+                    # Criar lista a partir dos dados horários
+                    pattern_list = []
+                    hourly_data = all_patterns.get("hourly_productivity", {})
+                    for hour, data in hourly_data.items():
+                        if isinstance(data, dict):
+                            pattern_list.append({
+                                "period": f"{hour}:00-{int(hour)+1}:00",
+                                "efficiency": data.get("efficiency", 0),
+                                "sample_size": data.get("sample_size", 0),
+                                "confidence": data.get("confidence", 0)
+                            })
+                patterns = pattern_list
+            elif isinstance(all_patterns, list):
+                patterns = all_patterns
+            else:
+                patterns = []
+            
             if patterns:
-                st.success(f"✅ {len(patterns)} padrões identificados")
+                st.success(f"✅ {len(patterns)} padrões horários identificados")
                 
-                for pattern in patterns[:5]:  # Mostrar top 5
+                # Mostrar top 5 padrões
+                for pattern in patterns[:5]:
                     col1, col2, col3 = st.columns([2, 1, 1])
                     with col1:
                         st.write(f"**{pattern.get('period', 'N/A')}**")
@@ -181,6 +205,20 @@ def main():
                     with col3:
                         sample_size = pattern.get('sample_size', 0)
                         st.metric("Amostras", sample_size)
+                        
+                # Gráfico de eficiência por hora
+                if len(patterns) > 1:
+                    hours = [p.get('period', '') for p in patterns]
+                    efficiencies = [p.get('efficiency', 0) for p in patterns]
+                    
+                    fig = px.line(
+                        x=hours, 
+                        y=efficiencies,
+                        title="📈 Eficiência ao Longo do Dia",
+                        labels={'x': 'Horário', 'y': 'Eficiência'}
+                    )
+                    fig.update_layout(height=400)
+                    st.plotly_chart(fig, use_container_width=True)
             else:
                 st.info("📊 Ainda coletando dados para identificar padrões...")
         else:
